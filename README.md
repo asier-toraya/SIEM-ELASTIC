@@ -1,4 +1,4 @@
-# SIEM-ELASTIC-SNORT pa la Inca
+# SIEM-ELASTIC-SNORT
 
 Este metodo evita los problemas de "mezclar imagenes latest con software viejo" y evita instalar cosas a mano dentro de contenedores de ELK.
 
@@ -68,6 +68,47 @@ docker compose ps
 ```
 
 Es normal que tarde 1-2 minutos en estar todo "healthy/ready" (especialmente Elasticsearch).
+
+AQUI es importante que mires que todos los contenedores estan encendidos, si no lo estan, probablemente
+sea por que el start.sh no se ha ejecutado correctamente, para solucionar esto tenemos que cambiar el archivo `Dockerfile` del ssh-victim por este nuevo codigo:
+```
+FROM debian:bullseye-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      openssh-server \
+      rsyslog \
+      ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+# Create the lab user (password: a1)
+RUN useradd -m -s /bin/bash victima \
+ && echo "victima:a1" | chpasswd
+
+# Basic SSH hardening for a lab (still allows password auth)
+RUN sed -i 's/^#\\?PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config \
+ && sed -i 's/^#\\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config \
+ && sed -i 's/^#\\?UsePAM.*/UsePAM yes/' /etc/ssh/sshd_config
+
+COPY start.sh /start.sh
+# Windows checkouts can convert LF->CRLF; that breaks the shebang and yields
+# "exec /start.sh: no such file or directory" at runtime inside Linux.
+RUN sed -i 's/\r$//' /start.sh \
+ && chmod +x /start.sh
+
+EXPOSE 22
+
+CMD ["/start.sh"]
+```
+
+Y luego ejecutar:
+```
+docker compose up -d --build --force-recreate ssh-victim
+
+docker compose up -d snort filebeat
+```
 
 ---
 
