@@ -1,0 +1,122 @@
+version: "3.8"
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.16.3
+    container_name: om-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+    networks:
+      - siem-net
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.16.3
+    container_name: om-logstash
+    depends_on:
+      - elasticsearch
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+    ports:
+      - "5044:5044"
+    networks:
+      - siem-net
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.16.3
+    container_name: om-kibana
+    depends_on:
+      - elasticsearch
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    networks:
+      - siem-net
+
+  nginx:
+    image: nginx:stable-bullseye
+    container_name: om-nginx
+    volumes:
+      - ./nginx/html:/usr/share/nginx/html:ro
+      - ./logs/nginx:/var/log/nginx
+    ports:
+      - "80:80"
+    networks:
+      - siem-net
+
+  ssh-victim:
+    build:
+      context: ./ssh-victim
+    container_name: om-ssh-victim
+    volumes:
+      - ./logs/ssh:/var/log
+    ports:
+      - "22:22"
+    networks:
+      - siem-net
+
+  snort:
+    image: vimagick/snort:latest
+    container_name: om-snort
+    depends_on:
+      - ssh-victim
+    # Snort shares the victim's network namespace, so it sees the same eth0 traffic.
+    network_mode: "service:ssh-victim"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ./logs/snort:/var/log/snort
+      - ./snort/local.rules:/etc/snort/rules/local.rules:ro
+    command: ["-i","eth0","-A","fast","-k","none","-c","/etc/snort/snort.conf","-l","/var/log/snort"]
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:7.16.3
+    container_name: om-filebeat
+    user: root
+    depends_on:
+      - logstash
+      - nginx
+      - ssh-victim
+      - snort
+    environment:
+      - STRICT_PERMS=false
+    volumes:
+      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - filebeatdata:/usr/share/filebeat/data
+      - ./logs/nginx:/var/log/nginx:ro
+      - ./logs/snort:/var/log/snort:ro
+      - ./logs/ssh:/var/log/ssh:ro
+    command: ["--strict.perms=false"]
+    networks:
+      - siem-net
+
+  # Helper container to generate traffic from inside the Docker network
+  # (avoids guessing the auto-generated compose network name).
+  tools:
+    image: alpine:3.19
+    container_name: om-tools
+    command: ["sh","-lc","apk add --no-cache iputils >/dev/null && sleep infinity"]
+    depends_on:
+      - ssh-victim
+    networks:
+      - siem-net
+
+volumes:
+  esdata:
+  filebeatdata:
+
+networks:
+  siem-net:
+    driver: bridge

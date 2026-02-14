@@ -1,0 +1,6 @@
+# Ignore generated logs and local state for this compose lab
+logs/
+
+# Docker named volumes are not in the repo, but keep placeholders clean if created
+data/
+

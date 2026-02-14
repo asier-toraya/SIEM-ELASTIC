@@ -1,0 +1,12 @@
+# Snort local rules (lab)
+#
+# Requirements:
+# - IDS: ICMP, SSH
+# - Use case: SSH brute force indicator
+
+# 1) SSH brute-force indicator: many SYN packets to port 22 from same source
+alert tcp any any -> any 22 (msg:"LAB SSH brute-force indicator (many connections)"; flags:S; threshold:type both, track by_src, count 10, seconds 60; sid:3000002; rev:1;)
+
+# 2) ICMP echo request (ping)
+alert icmp any any -> any any (msg:"LAB ICMP echo request (ping)"; itype:8; sid:3000004; rev:1;)
+

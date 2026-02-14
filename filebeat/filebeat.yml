@@ -1,0 +1,44 @@
+# Filebeat (7.16.3) - configuration for this lab
+#
+# This container reads plain text log files from bind-mounted folders:
+# - /var/log/nginx/*.log   (nginx)
+# - /var/log/snort/alert   (snort alerts)
+# - /var/log/ssh/auth.log  (ssh auth log from the victim container)
+#
+# It ships everything to Logstash on port 5044.
+
+seccomp:
+  # Lab stability: avoids rseq/seccomp crashes on some modern hosts.
+  enabled: false
+
+filebeat.inputs:
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/nginx/access.log
+      - /var/log/nginx/error.log
+    fields_under_root: true
+    fields:
+      type: nginx
+
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/snort/alert
+    fields_under_root: true
+    fields:
+      type: snort-alert
+
+  - type: log
+    enabled: true
+    paths:
+      - /var/log/ssh/auth.log
+    fields_under_root: true
+    fields:
+      type: ssh-auth
+
+output.logstash:
+  hosts: ["logstash:5044"]
+
+logging.level: info
+
