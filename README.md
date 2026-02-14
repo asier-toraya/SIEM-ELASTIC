@@ -1,4 +1,4 @@
-# (docker-compose) - SIEM Lab para novatos
+# SIEM-ELASTIC-SNORT pa la Inca
 
 Este metodo evita los problemas de "mezclar imagenes latest con software viejo" y evita instalar cosas a mano dentro de contenedores de ELK.
 
