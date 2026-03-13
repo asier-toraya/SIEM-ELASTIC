@@ -8,8 +8,18 @@ touch /var/log/auth.log /var/log/syslog
 # Host keys (only if not present)
 ssh-keygen -A >/dev/null 2>&1 || true
 
-# Start rsyslog (so sshd can write auth logs to /var/log/auth.log)
-/usr/sbin/rsyslogd || true
+# Clean up stale rsyslog pidfiles left behind by container restarts.
+for pidfile in /run/rsyslogd.pid /var/run/rsyslogd.pid; do
+  [ -f "$pidfile" ] || continue
+  pid="$(cat "$pidfile" 2>/dev/null || true)"
+  if [ -n "${pid:-}" ] && kill -0 "$pid" 2>/dev/null; then
+    continue
+  fi
+  rm -f "$pidfile"
+done
+
+# Start rsyslog so sshd can write auth logs to /var/log/auth.log.
+/usr/sbin/rsyslogd
 
 # Run sshd in foreground
 exec /usr/sbin/sshd -D

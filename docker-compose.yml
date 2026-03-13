@@ -40,7 +40,9 @@ services:
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     ports:
-      - "5601:5601"
+      # Some Windows setups intermittently hang on host port 5601.
+      # Expose Kibana on an alternative host port to avoid local conflicts/filters.
+      - "15601:5601"
     networks:
       - siem-net
 
@@ -49,6 +51,7 @@ services:
     container_name: om-nginx
     volumes:
       - ./nginx/html:/usr/share/nginx/html:ro
+      - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ./logs/nginx:/var/log/nginx
     ports:
       - "80:80"
@@ -61,6 +64,8 @@ services:
     container_name: om-ssh-victim
     volumes:
       - ./logs/ssh:/var/log
+    tmpfs:
+      - /run
     ports:
       - "22:22"
     networks:

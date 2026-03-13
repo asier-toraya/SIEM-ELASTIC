@@ -19,9 +19,11 @@ RUN sed -i 's/^#\\?PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ss
  && sed -i 's/^#\\?UsePAM.*/UsePAM yes/' /etc/ssh/sshd_config
 
 COPY start.sh /start.sh
-RUN chmod +x /start.sh
+# Windows checkouts can convert LF->CRLF; that breaks the shebang and yields
+# "exec /start.sh: no such file or directory" at runtime inside Linux.
+RUN sed -i 's/\r$//' /start.sh \
+ && chmod +x /start.sh
 
 EXPOSE 22
 
 CMD ["/start.sh"]
-

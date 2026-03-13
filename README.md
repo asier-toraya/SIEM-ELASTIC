@@ -21,7 +21,7 @@ Todos los comandos se ejecutan en **Windows PowerShell**.
 
 Importante (puertos):
 
-- Este laboratorio usa los puertos `80`, `22`, `5044`, `5601`, `9200`.
+- Este laboratorio usa los puertos `80`, `22`, `5044`, `15601`, `9200`.
 - Si ya tienes otro ELK/containers usando esos puertos, este metodo NO arrancara hasta que los pares.
 
 1. Abre PowerShell
@@ -116,7 +116,7 @@ docker compose up -d snort filebeat
 
 1. Abre Kibana:
 
-`http://localhost:5601`
+`http://localhost:15601`
 
 2. Crea un Data View (en tu version puede ser `Create index pattern`):
 `Stack management` -> `Index patterns` -> `Create index pattern`
@@ -232,7 +232,7 @@ Uno de los 2. Cuando diga "attacking..." espera unos 5-10 segundos y para con CT
 ```bash
 hydra -L /usr/share/wordlists/rockyou.txt -P /usr/share/wordlists/rockyou.txt ssh://192.168.1.35
 
-hydra -l asier -P /usr/share/wordlists/rockyou.txt ssh://192.168.1.35
+hydra -l victima -P /usr/share/wordlists/rockyou.txt ssh://192.168.1.35
 ```
 
 Si no tienes descomprimido el rockyou, tendras que descomprimirlo primero. O crearte tu propia wordlist si te resulta mas facil y usar ese archivo.
@@ -241,6 +241,7 @@ Nota:
 
 - Snort detecta "muchas conexiones" a 22 y lo escribe en `.\logs\snort\alert`.
 - `sshd` escribe `Failed password` en `.\logs\ssh\auth.log`.
+- Usa un usuario valido del lab (`victima`) si quieres ver `Failed password`; con usuarios que no existen veras eventos como `Invalid user` y no apareceran en el panel C.
 
 ---
 
